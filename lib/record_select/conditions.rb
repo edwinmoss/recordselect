@@ -32,7 +32,7 @@ module RecordSelect
       if params[:search] and !params[:search].strip.empty?
         tokens = params[:search].strip.split(' ')
 
-        where_clauses = record_select_config.search_on.collect { |sql| "LOWER(#{sql}) LIKE ?" }
+        where_clauses = record_select_config.search_on.collect { |sql| "#{sql} LIKE ?" }
         phrase = "(#{where_clauses.join(' OR ')})"
 
         sql = ([phrase] * tokens.length).join(' AND ')
@@ -80,7 +80,7 @@ module RecordSelect
 
     def merge_conditions(*conditions) #:nodoc:
       c = conditions.find_all {|c| not c.nil? and not c.empty? }
-      c.empty? ? nil : c.collect{|c| ActiveRecord::Base.send(:sanitize_sql, c)}.join(' AND ')
+      c.empty? ? nil : c.collect{|c| record_select_config.model.send(:sanitize_sql, c)}.join(' AND ')
     end
   end
 end
