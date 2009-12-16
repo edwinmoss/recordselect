@@ -154,7 +154,7 @@ module RecordSelect
     private
 
     # uses renderer (defaults to record_select_config.label) to determine how the given record renders.
-    def render_record_from_config(record, renderer = record_select_config.label)
+    def render_record_from_config(record, renderer = record_select_config.label, escape_it = true)
       case renderer
         when Symbol, String
         # return full-html from the named partial
@@ -162,7 +162,7 @@ module RecordSelect
 
         when Proc
         # return an html-cleaned descriptive string
-        h renderer.call(record)
+        escape_it ? h(renderer.call(record)) : renderer.call(record)
       end
     end
 
@@ -180,7 +180,7 @@ module RecordSelect
 
         when Proc
         # just return the string
-        render_record_from_config(record, renderer)
+        render_record_from_config(record, renderer, false)
       end
     end
 
