@@ -6,14 +6,14 @@ prev_url = url_for(pagination_url_params.merge(:page => page.prev.number, :escap
 next_url = url_for(pagination_url_params.merge(:page => page.next.number, :escape => false)) if page.next?
 -%>
 <ol>
-  <li class="found"><%= rs_("%d %s found", page.pager.count,
-record_select_config.model.to_s.pluralize.titleize.downcase) %></li>
+  <li class="found"><%= rs_(:records_found, :count => page.pager.count,
+:model => record_select_config.model.model_name.human(:count => page.pager.count).downcase) %></li>
   <% if page.prev? -%>
   <li class="pagination previous">
-    <%= link_to_remote image_tag('record_select/previous.gif', :alt => rs_('Previous')) + " " + rs_("Previous %d",
-page.pager.per_page),
-                      {:url => prev_url, :method => :get},
-                      {:href => prev_url} %>
+    <%= link_to image_tag('record_select/previous.gif', :alt => rs_(:previous)) + " " + rs_(:previous_items,
+:count => page.pager.per_page),
+                      {:url => prev_url},
+                      {:href => prev_url, :method => :get, :remote => true} %>
   </li>
   <% end -%>
   <% page.items.each do |record| -%>
@@ -23,9 +23,9 @@ page.pager.per_page),
   <% end -%>
   <% if page.next? -%>
   <li class="pagination next">
-    <%= link_to_remote rs_("Next %d", page.pager.per_page) + " " + image_tag('record_select/next.gif', :alt => rs_('Next')),
-                        {:url => next_url, :method => :get},
-                        {:href => next_url} %>
+  <%= link_to (rs_(:next_items, :count => page.pager.per_page) + " " + image_tag('record_select/next.gif', :alt => rs_(:next))).html_safe,
+                        {:url => next_url},
+                        {:href => next_url, :method => :get, :remote => true} %>
   </li>
   <% end -%>
 </ol>

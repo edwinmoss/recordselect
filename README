@@ -9,3 +9,7 @@ Please see the ActionView::Helpers::RecordSelectHelpers for the most common API.
 
 = DEPENDENCIES
 This depends on the excellent Paginator gem by Bruce Williams. This simple gem is available at paginator.rubyforge.org.
+
+
+If you would like to use jquery:
+uncomment line #RecordSelect::Config.js_framework = :jquery in init.rb

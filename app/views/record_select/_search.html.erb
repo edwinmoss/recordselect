@@ -5,10 +5,16 @@
 </form>
 
 <script type="text/javascript">
-//<![CDATA[
-var i = $(<%= record_select_search_id.to_json.html_safe %>).down('input.text-input');
-Form.Element.AfterActivity(i, function() {
-    $(<%= record_select_search_id.to_json.html_safe -%>).down('input.search_submit').click();
-}, 0.35);
-//]]>
+  //<![CDATA[
+<% if RecordSelect::Config.js_framework == :prototype %>
+  var i = $(<%= record_select_search_id.to_json.html_safe %>).down('input.text-input');
+  Form.Element.AfterActivity(i, function() {
+      $(<%= record_select_search_id.to_json.html_safe -%>).down('input.search_submit').click();
+  }, 0.35);
+<% elsif RecordSelect::Config.js_framework == :jquery %>
+  jQuery(<%= "##{record_select_search_id}".to_json.html_safe %>).find('input.text-input').delayedObserver(0.35, function() {
+     jQuery(<%= "##{record_select_search_id}".to_json.html_safe %>).trigger("submit");});
+<% end %>
+  //]]>
 </script>
+  

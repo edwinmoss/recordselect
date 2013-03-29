@@ -1,0 +1,13 @@
+es:
+  record_select:
+    next: "Siguiente"
+    next_items:
+      one: "Siguente"
+      other: "%{count} siguentes"
+    previous: "Anterior"
+    previous_items:
+      one: "Anterior"
+      other: "%{count} anteriores"
+    records_found:
+      one: "1 %{model} encontrado"
+      other: "%{count} %{model} encontrados"

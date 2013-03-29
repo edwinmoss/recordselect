@@ -4,14 +4,11 @@ module RecordSelect
     # params => [:page, :search]
     def browse
       conditions = record_select_conditions
-      klass = record_select_config.model
-      @count = klass.count(:conditions => conditions, :include =>  [record_select_includes, record_select_config.include].flatten.compact)
+      klass = record_select_model.where(conditions).includes(record_select_includes)
+      @count = klass.count
+      @count = @count.length if @count.is_a? ActiveSupport::OrderedHash
       pager = ::Paginator.new(@count, record_select_config.per_page) do |offset, per_page|
-        klass.find(:all, :offset => offset,
-                         :include => [record_select_includes, record_select_config.include].flatten.compact,
-                         :limit => per_page,
-                         :conditions => conditions,
-                         :order => record_select_config.order_by)
+        klass.select(record_select_select).includes(record_select_config.include).order(record_select_config.order_by).limit(per_page).offset(offset).all
       end
       @page = pager.page(params[:page] || 1)
 
@@ -19,7 +16,7 @@ module RecordSelect
         wants.html { render_record_select :partial => 'browse'}
         wants.js {
           if params[:update]
-            render_record_select :template => 'browse', :format => :js, :layout => false
+            render_record_select :template => 'browse'
           else
             render_record_select :partial => 'browse'
           end
@@ -33,7 +30,7 @@ module RecordSelect
     # :method => :post
     # params => [:id]
     def select
-      klass = record_select_config.model
+      klass = record_select_model
       record = klass.find(params[:id])
       if record_select_config.notify.is_a? Proc
         record_select_config.notify.call(record)
@@ -63,5 +60,9 @@ module RecordSelect
     def record_select_views_path
       "record_select"
     end
+  end
+
+  def record_select_model
+    record_select_config.model
   end
 end

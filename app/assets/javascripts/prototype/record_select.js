@@ -1,6 +1,6 @@
 document.observe("dom:loaded", function() {
   RecordSelect.document_loaded = true;
-  document.on('ajax:before', 'div.record-select * li a', function(event) {
+  document.on('ajax:before', 'div.record-select * li.record a', function(event) {
     var link = event.findElement();
     if (link) {
       if (RecordSelect.notify(link) == false) {
@@ -42,7 +42,12 @@ RecordSelect.notify = function(item) {
     return false;
   }
   else return true;
-}
+};
+
+RecordSelect.render_page = function(record_select_id, page) {
+  var page_element = $$('#' + record_select_id + ' ol')[0];
+  if (page_element) Element.replace(page_element, page);
+};
 
 RecordSelect.Abstract = Class.create();
 Object.extend(RecordSelect.Abstract.prototype, {
@@ -56,6 +61,9 @@ Object.extend(RecordSelect.Abstract.prototype, {
     this.url = url;
     this.options = options;
     this.container;
+    if (this.options.onchange && typeof this.options.onchange != 'function') {
+      this.options.onchange = eval(this.options.onchange);
+    }
 
     if (RecordSelect.document_loaded) this.onload();
     else Event.observe(window, 'load', this.onload.bind(this));
@@ -97,9 +105,13 @@ Object.extend(RecordSelect.Abstract.prototype, {
    * positions and reveals the recordselect
    */
   show: function() {
-    var offset = Position.cumulativeOffset(this.obj);
+    var offset = Position.cumulativeOffset(this.obj),
+        top = Element.getHeight(this.obj) + offset[1],
+        window_height = document.viewport.getHeight();
     this.container.style.left = offset[0] + 'px';
-    this.container.style.top = (Element.getHeight(this.obj) + offset[1]) + 'px';
+    if (top + Element.getHeight(this.container) > window_height)
+      this.container.style.bottom = (window_height - offset[1]) + 'px';
+    else this.container.style.top = top + 'px';
 
     if (this._use_iframe_mask()) {
       this.container.insertAdjacentHTML('afterEnd', '<iframe src="javascript:false;" class="record-select-mask" />');
@@ -175,8 +187,8 @@ Object.extend(RecordSelect.Abstract.prototype, {
     }.bind(this));
 
     // keyboard navigation, if available
-    if (this.onkeypress) {
-      text_field.observe('keypress', this.onkeypress.bind(this));
+    if (this.onkeydown) {
+      text_field.observe('keydown', this.onkeydown.bind(this));
     }
   },
 
@@ -194,7 +206,7 @@ Object.extend(RecordSelect.Abstract.prototype, {
   /**
    * keyboard navigation - where to intercept the keys is up to the concrete class
    */
-  onkeypress: function(ev) {
+  onkeydown: function(ev) {
     var elem;
     switch (ev.keyCode) {
       case Event.KEY_UP:
@@ -264,7 +276,8 @@ RecordSelect.Dialog.prototype = Object.extend(new RecordSelect.Abstract(), {
 /**
  * Used by record_select_field helper
  * The options hash may contain id: and label: keys, designating the current value
- * The options hash may also include an onchange: key, where the value is a javascript function (or eval-able string) for an callback routine.
+ * The options hash may also include an onchange: key, where the value is a javascript function (or eval-able string) for an callback routine
+ * and field_name: key, where value will be set as name of the input field.
  */
 RecordSelect.Single = Class.create();
 RecordSelect.Single.prototype = Object.extend(new RecordSelect.Abstract(), {
@@ -273,18 +286,16 @@ RecordSelect.Single.prototype = Object.extend(new RecordSelect.Abstract(), {
     this.container = this.create_container();
     this.container.addClassName('record-select-autocomplete');
 
-    // We are doing this in the record_select_field so that we can observe the field
-    // // create the hidden input
-    // new Insertion.After(this.obj, '<input type="hidden" name="" value="" />')
+    // create the hidden input
+    new Insertion.After(this.obj, '<input type="hidden" name="" value="" />')
     this.hidden_input = this.obj.next();
 
-    // We want control over submitting the temp field.
-    // // transfer the input name from the text input to the hidden input
-    // this.hidden_input.name = this.obj.name;
-    // this.obj.name = '';
+    // transfer the input name from the text input to the hidden input
+    this.hidden_input.name = this.obj.name;
+    this.obj.name = this.options.field_name || '';
 
     // initialize the values
-    this.set(this.options.id, this.options.label);
+    if (this.options.label) this.set(this.options.id, this.options.label);
 
     this._respond_to_text_field(this.obj);
     if (this.obj.focused) this.open(); // if it was focused before we could attach observers
@@ -298,8 +309,9 @@ RecordSelect.Single.prototype = Object.extend(new RecordSelect.Abstract(), {
   },
 
   onselect: function(id, value) {
-    if (this.options.onchange) this.options.onchange(id, value);
     this.set(id, value);
+    if (this.options.onchange) this.options.onchange.call(this, id, value);
+    this.obj.fire('recordselect:change', {"id": id, "label": value});
     this.close();
   },
 
@@ -309,6 +321,47 @@ RecordSelect.Single.prototype = Object.extend(new RecordSelect.Abstract(), {
   set: function(id, label) {
     this.obj.value = label.unescapeHTML();
     this.hidden_input.value = id;
+  }
+});
+
+/**
+ * Used by record_select_autocomplete helper
+ * The options hash may contain label: key, designating the current value
+ * The options hash may also include an onchange: key, where the value is a javascript function (or eval-able string) for an callback routine.
+ */
+RecordSelect.Autocomplete = Class.create();
+RecordSelect.Autocomplete.prototype = Object.extend(new RecordSelect.Abstract(), {
+  onload: function() {
+    // initialize the container
+    this.container = this.create_container();
+    this.container.addClassName('record-select-autocomplete');
+
+    // initialize the values
+    if (this.options.label) this.set(this.options.label);
+
+    this._respond_to_text_field(this.obj);
+    if (this.obj.focused) this.open(); // if it was focused before we could attach observers
+  },
+
+  close: function() {
+    // if they close the dialog with the text field empty, then delete the id value
+    if (this.obj.value == '') this.set('', '');
+
+    RecordSelect.Abstract.prototype.close.call(this);
+  },
+
+  onselect: function(id, value) {
+    this.set(value);
+    if (this.options.onchange) this.options.onchange.call(this, id, value);
+    this.obj.fire('recordselect:change', {"id": id, "label": value});
+    this.close();
+  },
+
+  /**
+   * sets the id/label
+   */
+  set: function(label) {
+    this.obj.value = label.unescapeHTML();
   }
 });
 
@@ -344,7 +397,6 @@ RecordSelect.Multiple.prototype = Object.extend(new RecordSelect.Abstract(), {
 
   onselect: function(id, value) {
     this.add(id, value);
-    this.close();
   },
 
   /**

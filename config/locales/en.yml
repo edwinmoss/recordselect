@@ -1,0 +1,9 @@
+en:
+  record_select:
+    next: "Next"
+    next_items: "Next %{count}"
+    previous: "Previous"
+    previous_items: "Previous %{count}"
+    records_found:
+      one: "1 %{model} found"
+      other: "%{count} %{model} found"
