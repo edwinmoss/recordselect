@@ -1,4 +1,17 @@
-Event.observe(window, 'load', function() {RecordSelect.document_loaded = true});
+document.observe("dom:loaded", function() {
+  RecordSelect.document_loaded = true;
+  document.on('ajax:before', 'div.record-select * li a', function(event) {
+    var link = event.findElement();
+    if (link) {
+      if (RecordSelect.notify(link) == false) {
+        event.stop();
+      } else {
+        link.toggleClassName("selected");
+      }
+    }
+    return true;
+  });  
+});    
 
 Form.Element.AfterActivity = function(element, callback, delay) {
   element = $(element);
@@ -121,7 +134,7 @@ Object.extend(RecordSelect.Abstract.prototype, {
    * returns true/false for whether the recordselect is open
    */
   is_open: function() {
-    return (this.container.childNodes.length > 0)
+	  return (!this.container.innerHTML.blank())
   },
 
   /**
@@ -294,7 +307,7 @@ RecordSelect.Single.prototype = Object.extend(new RecordSelect.Abstract(), {
    * sets the id/label
    */
   set: function(id, label) {
-    this.obj.value = label;
+    this.obj.value = label.unescapeHTML();
     this.hidden_input.value = id;
   }
 });

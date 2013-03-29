@@ -5,8 +5,8 @@ module RecordSelect
     def browse
       conditions = record_select_conditions
       klass = record_select_config.model
-      count = klass.count(:conditions => conditions, :include => [record_select_includes, record_select_config.include].flatten.compact)
-      pager = ::Paginator.new(count, record_select_config.per_page) do |offset, per_page|
+      @count = klass.count(:conditions => conditions, :include =>  [record_select_includes, record_select_config.include].flatten.compact)
+      pager = ::Paginator.new(@count, record_select_config.per_page) do |offset, per_page|
         klass.find(:all, :offset => offset,
                          :include => [record_select_includes, record_select_config.include].flatten.compact,
                          :limit => per_page,
@@ -16,12 +16,12 @@ module RecordSelect
       @page = pager.page(params[:page] || 1)
 
       respond_to do |wants|
-        wants.html { render_record_select :partial => '_browse.rhtml', :layout => true }
+        wants.html { render_record_select :partial => 'browse'}
         wants.js {
           if params[:update]
-            render_record_select :action => 'browse.rjs'
+            render_record_select :template => 'browse', :format => :js, :layout => false
           else
-            render_record_select :partial => '_browse.rhtml'
+            render_record_select :partial => 'browse'
           end
         }
         wants.yaml {}
@@ -49,21 +49,19 @@ module RecordSelect
       self.class.record_select_config
     end
 
-    def render_record_select(file, options = {}) #:nodoc:
-      options[:layout] ||= false
-      options[:file] = record_select_path_of(file[:partial] || file[:action])
-      options[:use_full_path] = false
-      render options
+    def render_record_select(options = {}) #:nodoc:
+      [:template,:partial].each do |template_name|
+        if options[template_name] then
+          options[template_name] = File.join(record_select_views_path, options[template_name])
+        end
+      end
+      if block_given? then yield options else render options end
     end
 
     private
 
     def record_select_views_path
-      @record_select_views_path ||= "vendor/plugins/#{File.expand_path(__FILE__).match(/vendor\/plugins\/(\w*)/)[1]}/lib/views"
-    end
-
-    def record_select_path_of(template)
-      File.join(Rails.root, record_select_views_path, template)
+      "record_select"
     end
   end
 end

@@ -8,7 +8,7 @@ module RecordSelect
 
       @per_page = options[:per_page]
 
-      @search_on = [options[:search_on]].flatten
+      @search_on = [options[:search_on]].flatten unless options[:search_on].nil?
 
       @order_by = options[:order_by]
 
@@ -17,6 +17,8 @@ module RecordSelect
       @label = options[:label]
 
       @include = options[:include]
+
+      @link = options[:link]
     end
 
     # The model object we're browsing
@@ -42,7 +44,7 @@ module RecordSelect
     end
 
     def order_by
-      @order_by ||= "#{model.primary_key} ASC"
+      @order_by ||= "#{model.table_name}.#{model.primary_key} ASC"
     end
 
     def full_text_search?
@@ -72,6 +74,11 @@ module RecordSelect
     #
     def label
       @label ||= proc {|r| r.to_label}
+    end
+
+    # whether wrap the text returned by label in a link or not
+    def link?
+      @link.nil? ? true : @link
     end
 
     protected
